@@ -27,14 +27,20 @@ class WalletServices extends Service {
         return wallet;
     }
 
-    async fetchWalletFromAddress(address: string){
+    async fetchWalletFromAddress(address: string, connectWallet: boolean = true){
         config();
         const walletRepo = AppDataSource.getRepository(Wallet);
         const walletModel = await walletRepo.findOne({where:{address}});
-        if(walletModel === null) return null;
+        if(walletModel === null){
+            console.log('Could not find any account for selected address.....',address);
+            return null;
+        }
         const walletCrypt = walletModel.walletCrypt;
         const decrypted = decryptValue(walletCrypt);
-        const wallet = ethers.Wallet.fromEncryptedJson(decrypted,process.env.ENCRYPTION_PASSPHRASE ?? "");
+        let wallet = await ethers.Wallet.fromEncryptedJson(decrypted,process.env.ENCRYPTION_PASSPHRASE ?? "");
+        if(connectWallet){
+            wallet = wallet.connect(this.provider)
+        }
         return wallet;
     }
 

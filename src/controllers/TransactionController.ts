@@ -25,7 +25,7 @@ export default class TransactionController extends Controller{
                 nonce: await vaultWallet.getTransactionCount()
             })
             console.log("Proposed Gas Price......", proposedGasPrice);
-            console.log("Created Transaction.............",txnRequest);
+            console.log("Created Transaction.............",txnRequest,vaultWallet,"this is vaultadd "+ vaultAddress);
             Controller.successWithData(res,txnRequest);
 
         } catch(e){
