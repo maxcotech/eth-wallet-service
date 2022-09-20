@@ -1,0 +1,1 @@
+export const TRANSFER_FUNC_BYTE = "0xa9059cbb";
