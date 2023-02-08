@@ -16,7 +16,7 @@ export default class ReceivedTransaction {
     value: string;  // in ethers
 
     @Column({nullable: true})
-    contractId: number;
+    contractId?: number;
 
     @Column({type:"boolean",default:false})
     sentToVault: boolean;

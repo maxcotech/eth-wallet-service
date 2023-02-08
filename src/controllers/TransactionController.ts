@@ -1,21 +1,19 @@
 import Controller from './Controller';
-import { Request } from 'express';
-import { Response } from 'express';
 import TransactionService from '../services/TransactionService';
-import { config } from 'dotenv';
 import WalletServices from './../services/WalletServices';
-import { ethers } from 'ethers';
-config()
+import { HttpRequestParams } from './../dataTypes/Http';
+import { VAULT_ADDRESS } from '../config/settings';
+
 
 export default class TransactionController extends Controller{
     
 
-    public static async createTransaction(req: Request, res: Response){
+    public static async createTransaction({req, res}: HttpRequestParams){
         try{
-            const {toAddress, contractAddress, amount} = req.body ?? {};
+            const {toAddress, contractAddress, amount, fromAddress} = req.body ?? {};
             const txnService = new TransactionService();
             const walletService = new WalletServices();
-            const vaultAddress = process.env.VAULT_ADDRESS ?? "";
+            const vaultAddress = VAULT_ADDRESS ?? "";
             const vaultWallet = await walletService.fetchWalletFromAddress(vaultAddress);
             const proposedGasPrice = (await txnService.getGasFeePayload())?.ProposeGasPrice
             const txnRequest = await vaultWallet?.populateTransaction({
@@ -26,7 +24,7 @@ export default class TransactionController extends Controller{
             })
             console.log("Proposed Gas Price......", proposedGasPrice);
             console.log("Created Transaction.............",txnRequest,vaultWallet,"this is vaultadd "+ vaultAddress);
-            Controller.successWithData(res,txnRequest);
+            Controller.successWithData(res,await vaultWallet?.getFeeData());
 
         } catch(e){
             let message = "Unknown error occurred";

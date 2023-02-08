@@ -2,6 +2,10 @@ import  { AxiosInstance } from "axios";
 import * as bitcoin from "bitcoinjs-lib";
 import { config } from "dotenv";
 import { ethers } from 'ethers';
+import AppDataSource from "../config/dataSource";
+import { Repository } from 'typeorm';
+import Contract from "../entities/Contract";
+import { transactionErrors } from "../config/errors/transaction.errors";
 
 class Service {
     
@@ -12,7 +16,8 @@ class Service {
     wsProvider: ethers.providers.WebSocketProvider;
     apiKey: string | undefined;
     client: AxiosInstance;
-    jsonrpcVersion: 1.0
+    jsonrpcVersion: 1.0;
+    contractRepo: Repository<Contract>
 
 
     constructor(){
@@ -21,13 +26,21 @@ class Service {
         this.apiKey = process.env.GB_API_KEY;
         this.baseUrl = `https://eth.getblock.io/testnet/?api_key=${this.apiKey}`;
         this.wsBaseUrl = `wss://eth.getblock.io/testnet/?api_key=${this.apiKey}`;
-        this.provider = new ethers.providers.JsonRpcProvider(this.baseUrl);
+        this.provider = new ethers.providers.AlchemyProvider("goerli","U6aQPfTVM2JtdZxf8Rsd1Su_UHLt-MAu")  //JsonRpcProvider(this.baseUrl);
+        this.contractRepo = AppDataSource.getRepository(Contract);      
     }
 
 
     getConnection(){
         return this;
     }
+
+    async getContract(contractId: number){
+        const contract = await this.contractRepo.findOneBy({id: contractId});
+        if(contract === null) throw new Error(transactionErrors.invalidContractTransaction);
+        return contract;
+    }
+
 
     
 
@@ -49,7 +62,6 @@ class Service {
         }),{
             maxContentLength: Infinity
         })
-       
     }
 
 }
