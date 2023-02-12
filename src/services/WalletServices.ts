@@ -8,6 +8,8 @@ import { config } from "dotenv";
 import { decryptValue } from "../helpers/object_helpers";
 import { ENCRYPTION_PASSPHRASE, VAULT_ADDRESS, VAULT_PRIV_KEY } from "../config/settings";
 import TransactionService from "./TransactionService";
+import ValidationException from "../exceptions/ValidationException";
+import { walletErrors } from "../config/errors/wallet.errors";
 
 class WalletServices extends Service {
 
@@ -32,19 +34,21 @@ class WalletServices extends Service {
         const walletModel = await walletRepo.findOne({where:{address}});
         if(walletModel === null){
             console.log('Could not find any account for selected address.....',address);
-            return null;
+            if(address.toLowerCase() === VAULT_ADDRESS.toLowerCase()){
+                console.log('returning vault address');
+                return await this.getVaultWallet(connectWallet);
+            } else {
+                throw new ValidationException(walletErrors.walletNotFound);
+            }
+        } else {
+            const walletCrypt = walletModel.walletCrypt;
+            const decrypted = decryptValue(walletCrypt);
+            let wallet = await ethers.Wallet.fromEncryptedJson(decrypted,ENCRYPTION_PASSPHRASE ?? "");
+            if(connectWallet){
+                wallet = wallet.connect(this.provider)
+            }
+            return wallet;
         }
-        if(address === VAULT_ADDRESS){
-            console.log('returning vault address');
-            return await this.getVaultWallet(connectWallet);
-        }
-        const walletCrypt = walletModel.walletCrypt;
-        const decrypted = decryptValue(walletCrypt);
-        let wallet = await ethers.Wallet.fromEncryptedJson(decrypted,ENCRYPTION_PASSPHRASE ?? "");
-        if(connectWallet){
-            wallet = wallet.connect(this.provider)
-        }
-        return wallet;
     }
 
     async fetchTokenBalance(address: string, contractId: number){

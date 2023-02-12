@@ -130,13 +130,13 @@ export default class AppService extends Service {
                                 const messageQueue = new MessageQueueService();
                                 const vaultTransferService = new VaultTransferService();
                                 await messageQueue.queueCreditTransaction(newReceivedTxn);
-                                await vaultTransferService.recordPendingVaultTransfer(fromAddress,VAULT_ADDRESS,transaction.hash,valueInEther,contract.id);
-                                const feeEstimate = await txnService.fetchFeeEstimate(VAULT_ADDRESS,true); console.log('fee estimate in ethers', ethers.utils.formatEther(feeEstimate as ethers.BigNumber)) //estimate the cost of sending received token to vault
+                                await vaultTransferService.recordPendingVaultTransfer(newReceivedTxn.address,VAULT_ADDRESS,transaction.hash,valueInEther,contract.id);
+                                const feeEstimate = await txnService.fetchFeeEstimate(newReceivedTxn.address,true); 
+                                console.log('fee estimate in ethers', parseFloat(ethers.utils.formatEther(feeEstimate as any))) //estimate the cost of sending received token to vault
                                 await txnService.sendTransferTransaction(
                                     parseFloat(ethers.utils.formatEther(feeEstimate as ethers.BigNumberish)),
                                     VAULT_ADDRESS,
-                                    newReceivedTxn.address,
-                                    contract.id
+                                    newReceivedTxn.address
                                 )
                             }
                         }

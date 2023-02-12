@@ -3,6 +3,8 @@ import TransactionService from '../services/TransactionService';
 import WalletServices from './../services/WalletServices';
 import { HttpRequestParams } from './../dataTypes/Http';
 import { VAULT_ADDRESS } from '../config/settings';
+import AppDataSource from '../config/dataSource';
+import Contract from '../entities/Contract';
 
 
 export default class TransactionController extends Controller{
@@ -12,19 +14,18 @@ export default class TransactionController extends Controller{
         try{
             const {toAddress, contractAddress, amount, fromAddress} = req.body ?? {};
             const txnService = new TransactionService();
-            const walletService = new WalletServices();
-            const vaultAddress = VAULT_ADDRESS ?? "";
-            const vaultWallet = await walletService.fetchWalletFromAddress(vaultAddress);
-            const proposedGasPrice = (await txnService.getGasFeePayload())?.ProposeGasPrice
-            const txnRequest = await vaultWallet?.populateTransaction({
-                to: vaultAddress,
-                gasLimit: txnService.getGasLimit(),
-                gasPrice: proposedGasPrice,
-                nonce: await vaultWallet.getTransactionCount()
-            })
-            console.log("Proposed Gas Price......", proposedGasPrice);
-            console.log("Created Transaction.............",txnRequest,vaultWallet,"this is vaultadd "+ vaultAddress);
-            Controller.successWithData(res,await vaultWallet?.getFeeData());
+            const contractRepo = AppDataSource.getRepository(Contract);
+            const contract = (contractAddress)? await contractRepo.findOneBy({contractAddress}): null;
+            const sentTransaction = await txnService.sendTransferTransaction(
+                amount, 
+                fromAddress ?? VAULT_ADDRESS,
+                toAddress,
+                contract?.id ?? undefined
+            )
+            return {
+                sentTransaction,
+                amount
+            }
 
         } catch(e){
             let message = "Unknown error occurred";

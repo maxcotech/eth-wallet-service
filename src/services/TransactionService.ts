@@ -144,6 +144,8 @@ export default class TransactionService extends Service{
             const feeEstimate = await this.fetchFeeEstimate(senderAddress,true);
             console.log('fee estimate', feeEstimate);
             if(coinBalance.lt(feeEstimate as ethers.BigNumber)){
+                console.log('Coin Balance is ',ethers.utils.formatEther(coinBalance));
+                console.log('Fee Estimate is', ethers.utils.formatEther(feeEstimate as ethers.BigNumberish));
                 throw new ValidationException(transactionErrors.insufficientFee);
             }
             if(balance.lt(amount)) { 
@@ -161,7 +163,7 @@ export default class TransactionService extends Service{
             return transactionObj;
         }
         catch(e){
-            console.log('Failed to create transaction')
+            console.log('Failed to create transaction',(e instanceof Error)? e.message+" "+e.stack:"")
         }
         
     }
