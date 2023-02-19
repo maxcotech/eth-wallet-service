@@ -1,14 +1,11 @@
-import axios from 'axios';
 import Service from './Service';
-import { EtherscanFeeEstimate} from './../dataTypes/Transaction';
-import { config } from 'dotenv';
 import { ethers, utils } from 'ethers';
 import WalletServices from './WalletServices';
 import { Repository } from 'typeorm';
 import ReceivedTransaction from '../entities/ReceivedTransaction';
 import AppDataSource from '../config/dataSource';
 import Wallet from '../entities/Wallet';
-import { EIP_TYPE, VAULT_ADDRESS } from '../config/settings';
+import { DECIMAL_PLACES, EIP_TYPE, VAULT_ADDRESS } from '../config/settings';
 import ValidationException from '../exceptions/ValidationException';
 import { transactionErrors } from '../config/errors/transaction.errors';
 import { walletErrors } from '../config/errors/wallet.errors';
@@ -22,14 +19,13 @@ export default class TransactionService extends Service{
 
     constructor(){
         super();
-        config();
         this.vaultTxnInterval = 1000 * 60 * 5;
         this.receivedTxnRepo = AppDataSource.getRepository(ReceivedTransaction);
         this.walletRepo = AppDataSource.getRepository(Wallet);
         this.sentTxnRepo = AppDataSource.getRepository(SentTransaction);
     }
     async sendCoinToVault(fromAddress: string, amount: string, privateKey: any = null){
-        const vaultAddr = process.env.VAULT_ADDRESS;
+        const vaultAddr = VAULT_ADDRESS;
         const walletServices = new WalletServices();
         const wallet = (privateKey === null || privateKey === undefined)? await walletServices.fetchWalletFromAddress(fromAddress): walletServices.createWalletFromPrivateKey(privateKey);
         if(wallet !== null){
@@ -61,18 +57,11 @@ export default class TransactionService extends Service{
         return (contractTransaction)? 250000 : 21000;
     }
 
-    async getGasFeePayload(){
-        config();
-        const url = process.env.ETHERSCAN_URL;
-        const apiKey = process.env.ETHERSCAN_API_KEY;
-        const {data} = await axios.get(`${url}?module=gastracker&action=gasoracle&apikey=${apiKey}`);
-        return data?.result as EtherscanFeeEstimate ?? {};
-    }
 
     getFeeDifference(amount: number, gasPriceNum: number, decimal: number | null){
         const gasLimitNum = this.getGasLimit();
         const totalFee = gasLimitNum * gasPriceNum;
-        return amount - parseFloat(ethers.utils.formatUnits(totalFee,decimal ?? process.env.DECIMAL_PLACES));
+        return amount - parseFloat(ethers.utils.formatUnits(totalFee,decimal ?? DECIMAL_PLACES));
     }
 
     async createTransferTransaction(amountInput?: number, fromAddress?: string , recipientAddress?: string, contractId?: number, acceptBelowAmount: boolean = false){

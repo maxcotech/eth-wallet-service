@@ -35,3 +35,7 @@ export async function requireAuthKey(controller: (params: HttpRequestParams) => 
 function authKeyIsValid(authKey: any){
     return (authKey === CLIENT_AUTH);
 }
+
+export async function getClientSecret(){
+    return CLIENT_AUTH;
+}

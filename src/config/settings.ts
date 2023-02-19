@@ -12,3 +12,16 @@ export const FAILED_MESSAGE_MAX_RETRIAL = process.env.FAILED_MESSAGE_MAX_RETRIAL
 export const WALLET_DEFAULT_SYMBOL = process.env.WALLET_DEFAULT_SYMBOL ?? "ETH";
 export const RESERVE_BALANCE_PERCENTAGE = parseFloat(process.env.RESERVE_BALANCE_PERCENTAGE ?? "");
 export const EIP_TYPE: number = parseInt(process.env.EIP_TYPE ?? "");
+export const APP_BASE_URL = process.env.APP_BASE_URL ?? "http://localhost:8000/api/v1/";
+export const NETWORK_PATH = process.env.NETWORK_PATH ?? "mainnet";
+export const ALCHEMY_KEY = process.env.ALCHEMY_KEY ?? "";
+export const ALCHEMY_NODE = process.env.ALCHEMY_NODE;
+export const MESSAGE_RETRY_LIMIT = parseInt(process.env.MESSAGE_RETRY_LIMIT ?? "100000")
+
+//Database Specific Configs 
+export const DB_TYPE = process.env.DB_TYPE ?? "mysql"
+export const DB_HOST = process.env.DB_HOST 
+export const DB_PASSWORD = process.env.DB_PASSWORD
+export const DB_NAME = process.env.DB_NAME
+export const DB_USER = process.env.DB_USER
+export const DB_PORT = parseInt(process.env.DB_PORT ?? "3306")

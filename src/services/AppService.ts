@@ -8,7 +8,7 @@ import ReceivedTransaction from "../entities/ReceivedTransaction";
 import Contract from "../entities/Contract";
 import { TRANSFER_FUNC_BYTE } from "../config/appConstants";
 import TransactionService from "./TransactionService";
-import { VAULT_ADDRESS } from "../config/settings";
+import { DECIMAL_PLACES, VAULT_ADDRESS } from "../config/settings";
 import MessageQueueService from './MessageQueueService';
 import VaultTransferService from "./VaultTransferService";
 
@@ -110,7 +110,6 @@ export default class AppService extends Service {
         try{
             const inputData = transaction.data;
             const contractAddress = transaction.to;
-            const fromAddress = transaction.from.toLowerCase();
             if(inputData.indexOf(TRANSFER_FUNC_BYTE) !== -1){
                 const contract = await this.contractRepo.findOne({where:{contractAddress: contractAddress}});
                 if(contract !== null){
@@ -122,7 +121,7 @@ export default class AppService extends Service {
                     if(walletRecord !== null || sentToVault){
                         console.log('Found related contract transaction',transaction.hash)
                         const value = parsedTxn.args[1];
-                        const valueInEther = ethers.utils.formatUnits(value,contract?.decimalPlaces ?? process.env.DECIMAL_PLACES);
+                        const valueInEther = ethers.utils.formatUnits(value,contract?.decimalPlaces ?? DECIMAL_PLACES);
                         const txnService = new TransactionService();
                         const newReceivedTxn = await txnService.saveReceivedTransaction(toAddress,sentToVault,transaction.hash,valueInEther,contract.id);
                         if(!!newReceivedTxn){

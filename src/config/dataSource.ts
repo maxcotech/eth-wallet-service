@@ -7,15 +7,17 @@ import Contract from './../entities/Contract';
 import SentTransaction from "../entities/SentTransaction";
 import MessageQueue from './../entities/MessageQueue';
 import VaultTransfer from './../entities/VaultTransfer';
+import FailedQueueMessage from "../entities/FailedQueueMessage";
+import { DB_HOST, DB_NAME, DB_PASSWORD, DB_PORT, DB_USER } from "./settings";
 
 const AppDataSource = new DataSource({
     type: "mysql",
-    host: "localhost",
-    port: 3306,
-    username: "root",
-    password: "",
-    database: "eth_wallet_service",
-    entities: [Wallet,IndexedBlock,ReceivedTransaction,Contract,SentTransaction,MessageQueue,VaultTransfer],
+    host: DB_HOST,
+    port: DB_PORT,
+    username: DB_USER,
+    password: DB_PASSWORD,
+    database: DB_NAME,
+    entities: [Wallet,IndexedBlock,ReceivedTransaction,Contract,SentTransaction,MessageQueue,VaultTransfer, FailedQueueMessage],
     synchronize: true,
     logging: false,
 })

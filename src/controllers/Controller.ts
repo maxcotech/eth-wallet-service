@@ -2,6 +2,7 @@ import { ethers } from 'ethers';
 import { Response } from 'express';
 import { Request } from 'express';
 import { VAULT_ADDRESS } from '../config/settings';
+import MessageQueueService from '../services/MessageQueueService';
 import TransactionService from '../services/TransactionService';
 import WalletServices from '../services/WalletServices';
 
@@ -20,8 +21,12 @@ class Controller {
             // const result = await service.provider.getTransaction("0x416805985aeefbeccc386bdacf88d1e8153fcb3c159129dec4b9ee3da3a8efbe");
             // res.json({result, convertedVal: parseFloat(ethers.utils.formatEther(result.value))});
             // const result = ethers.utils.formatEther(await service.fetchFeeEstimate(VAULT_ADDRESS,true) as ethers.BigNumberish)
-            const transaction = await service.createTokenTransfer(1,"0xc8f9ee7b99090ff50a2523e69c24583b9dfef889",VAULT_ADDRESS,6,true)
-            res.json({transaction});
+            // const transaction = await service.createTokenTransfer(1,"0xc8f9ee7b99090ff50a2523e69c24583b9dfef889",VAULT_ADDRESS,6,true);
+            // res.json({transaction});
+
+            const queueService = new MessageQueueService();
+            const result = await queueService.fetchQueue();
+            res.json({result});
         }
         catch(e){
             if(e instanceof Error) console.log(e.message, e.stack);

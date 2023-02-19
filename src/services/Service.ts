@@ -1,15 +1,16 @@
-import  { AxiosInstance } from "axios";
-import * as bitcoin from "bitcoinjs-lib";
-import { config } from "dotenv";
+import  Axios, { AxiosInstance } from "axios";
 import { ethers } from 'ethers';
 import AppDataSource from "../config/dataSource";
 import { Repository } from 'typeorm';
 import Contract from "../entities/Contract";
 import { transactionErrors } from "../config/errors/transaction.errors";
+import { ALCHEMY_KEY, APP_BASE_URL, GB_API_KEY, NETWORK_PATH } from "../config/settings";
+import { getClientSecret } from "../helpers/auth_helpers";
+import { AUTH_HEADER_KEY } from "../config/appConstants";
+import { ALCHEMY_NODE } from './../config/settings';
 
 class Service {
     
-    network: bitcoin.networks.Network;
     baseUrl: string;
     wsBaseUrl: string;
     provider: ethers.providers.JsonRpcProvider;
@@ -21,12 +22,10 @@ class Service {
 
 
     constructor(){
-        config();
-        this.network = bitcoin.networks.testnet;
-        this.apiKey = process.env.GB_API_KEY;
-        this.baseUrl = `https://eth.getblock.io/testnet/?api_key=${this.apiKey}`;
-        this.wsBaseUrl = `wss://eth.getblock.io/testnet/?api_key=${this.apiKey}`;
-        this.provider = new ethers.providers.AlchemyProvider("goerli","U6aQPfTVM2JtdZxf8Rsd1Su_UHLt-MAu")  //JsonRpcProvider(this.baseUrl);
+        this.apiKey = GB_API_KEY;
+        this.baseUrl = `https://eth.getblock.io/${NETWORK_PATH}/?api_key=${this.apiKey}`;
+        this.wsBaseUrl = `wss://eth.getblock.io/${NETWORK_PATH}/?api_key=${this.apiKey}`;
+        this.provider = new ethers.providers.AlchemyProvider(ALCHEMY_NODE,ALCHEMY_KEY);
         this.contractRepo = AppDataSource.getRepository(Contract);      
     }
 
@@ -39,6 +38,12 @@ class Service {
         const contract = await this.contractRepo.findOneBy({id: contractId});
         if(contract === null) throw new Error(transactionErrors.invalidContractTransaction);
         return contract;
+    }
+
+    async appClient(){
+        const headers = {'Content-Type':"application/json"}
+        headers[AUTH_HEADER_KEY] = await getClientSecret();
+        return Axios.create({ baseURL: APP_BASE_URL, headers })
     }
 
 
