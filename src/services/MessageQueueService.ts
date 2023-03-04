@@ -2,20 +2,22 @@ import ReceivedTransaction from "../entities/ReceivedTransaction";
 import Service from "./Service";
 import AppDataSource from './../config/dataSource';
 import MessageQueue from "../entities/MessageQueue";
-import { FindOperator, IsNull, MoreThanOrEqual, Not, Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import Contract from './../entities/Contract';
-import { transactionErrors } from "../config/errors/transaction.errors";
 import { MESSAGE_RETRY_LIMIT, WALLET_DEFAULT_SYMBOL } from "../config/settings";
 import { MessageTypes } from "../config/enums";
 import { AxiosError } from "axios";
+import FailedQueueMessage from "../entities/FailedQueueMessage";
 
 export default class MessageQueueService extends Service {
     messageRepo: Repository<MessageQueue>
     contractRepo: Repository<Contract>
+    failedMessageRepo: Repository<FailedQueueMessage>
     constructor(){
         super();
         this.messageRepo = AppDataSource.getRepository(MessageQueue);
         this.contractRepo = AppDataSource.getRepository(Contract);
+        this.failedMessageRepo = AppDataSource.getRepository(FailedQueueMessage);
     }
 
     async fetchQueue(){
@@ -68,7 +70,7 @@ export default class MessageQueueService extends Service {
         newFailedMsg.retried = message.retries;
         newFailedMsg.messageId = message.id;
         newFailedMsg.type = message.type;
-        let savedFailedMsg = null;
+        let savedFailedMsg: FailedQueueMessage | null = null;
         await AppDataSource.transaction(async () => {
             savedFailedMsg = await this.failedMessageRepo.save(newFailedMsg);
             await this.messageRepo.delete({id: message.id});

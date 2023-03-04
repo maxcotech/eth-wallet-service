@@ -8,6 +8,8 @@ import bodyParser from "body-parser";
 import Controller from "./controllers/Controller";
 import { requireAuthKey } from "./helpers/auth_helpers";
 import { PORT } from "./config/settings";
+import ContractController from './controllers/ContractController';
+import MessageQueueService from "./services/MessageQueueService";
 
 const app = express();
 const jsonParser = bodyParser.json();
@@ -16,15 +18,20 @@ const jsonParser = bodyParser.json();
     try{
         await AppDataSource.initialize();
         console.log('App Data source initialized');
-        const appService = new AppService();
-        appService.syncBlockchainData();
         app.post("/address",jsonParser,await requireAuthKey(AddressController.createAddress));
         app.post("/transaction",jsonParser,await requireAuthKey(TransactionController.createTransaction));
+        app.post("/contract",jsonParser,await requireAuthKey(ContractController.saveContract));
+        app.delete('/contract/:address',await requireAuthKey(ContractController.deleteContract));
         app.get("/", HomeController.index);
         app.get("/test-run", Controller.testRun)
         app.listen(PORT,() => {
             console.log(`Ethereum wallet service running on port ${PORT}`);
         })
+
+        const appService = new AppService();
+        const messageService = new MessageQueueService();
+        appService.syncBlockchainData();
+        messageService.processMessageQueue();
 
     } catch(e){
         console.log('Failed to initialize App', e)

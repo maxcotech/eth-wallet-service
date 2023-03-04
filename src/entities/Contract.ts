@@ -15,7 +15,7 @@ export default class Contract {
     @Column({type:"varchar", length:2000})
     contractAddress: string;
 
-    @Column({type: "varchar", length:3000})
+    @Column({type: "varchar", length:3000, nullable: true})
     contractAbi: string;
 
     @Column({nullable: true})
