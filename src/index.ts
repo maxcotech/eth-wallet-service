@@ -25,7 +25,7 @@ const jsonParser = bodyParser.json();
         app.delete('/contract/:address',await requireAuthKey(ContractController.deleteContract));
         app.get("/", HomeController.index);
         app.get("/test-run", Controller.testRun);
-        app.get('/retry-failed', async () => await messageService.reQueueFailedMessages())
+        app.get('/retry-failed', async (req,res) => res.json({message:await messageService.reQueueFailedMessages()}))
         app.listen(PORT,() => {
             console.log(`Ethereum wallet service running on port ${PORT}`);
         })

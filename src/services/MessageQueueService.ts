@@ -96,11 +96,12 @@ export default class MessageQueueService extends Service {
                     await this.messageRepo.insert(messages);
                     await this.failedMessageRepo.delete({id: In(failedIdsToDelete)})
                 })
-
+                return 'Successfully requeued all failed messages';
             }
+            return "No failed messages to requeue";
         }
         catch(e){
-            console.log('Failed to restore failed messages ',(e instanceof Error)? e.message: "")
+            return 'Failed to restore failed messages '+((e instanceof Error)? e.message: "");
         }
     }
 
