@@ -2,7 +2,7 @@ import ReceivedTransaction from "../entities/ReceivedTransaction";
 import Service from "./Service";
 import AppDataSource from './../config/dataSource';
 import MessageQueue from "../entities/MessageQueue";
-import { Not, Repository } from 'typeorm';
+import { In, Not, Repository } from 'typeorm';
 import Contract from './../entities/Contract';
 import { MESSAGE_RETRY_LIMIT, WALLET_DEFAULT_SYMBOL } from "../config/settings";
 import { MessageTypes } from "../config/enums";
@@ -76,6 +76,32 @@ export default class MessageQueueService extends Service {
             await this.messageRepo.delete({id: message.id});
         })
         return savedFailedMsg;
+    }
+
+    async reQueueFailedMessages(){
+        try{
+            const items = await this.failedMessageRepo.find();
+            if(items.length > 0){
+                const messages: MessageQueue[] = [];
+                const failedIdsToDelete: number[] = [];
+                items.forEach((item) => {
+                    const newMessage = new MessageQueue();
+                    newMessage.message = item.message;
+                    newMessage.type = item.type;                                                                                                                                                                   
+                    newMessage.retries = 0;
+                    messages.push(newMessage);
+                    failedIdsToDelete.push(item.id);
+                })
+                await AppDataSource.transaction(async () => {
+                    await this.messageRepo.insert(messages);
+                    await this.failedMessageRepo.delete({id: In(failedIdsToDelete)})
+                })
+
+            }
+        }
+        catch(e){
+            console.log('Failed to restore failed messages ',(e instanceof Error)? e.message: "")
+        }
     }
 
 

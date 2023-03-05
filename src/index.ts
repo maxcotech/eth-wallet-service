@@ -18,18 +18,19 @@ const jsonParser = bodyParser.json();
     try{
         await AppDataSource.initialize();
         console.log('App Data source initialized');
+        const messageService = new MessageQueueService();
         app.post("/address",jsonParser,await requireAuthKey(AddressController.createAddress));
         app.post("/transaction",jsonParser,await requireAuthKey(TransactionController.createTransaction));
         app.post("/contract",jsonParser,await requireAuthKey(ContractController.saveContract));
         app.delete('/contract/:address',await requireAuthKey(ContractController.deleteContract));
         app.get("/", HomeController.index);
-        app.get("/test-run", Controller.testRun)
+        app.get("/test-run", Controller.testRun);
+        app.get('/retry-failed', async () => await messageService.reQueueFailedMessages())
         app.listen(PORT,() => {
             console.log(`Ethereum wallet service running on port ${PORT}`);
         })
 
         const appService = new AppService();
-        const messageService = new MessageQueueService();
         appService.syncBlockchainData();
         messageService.processMessageQueue();
 
