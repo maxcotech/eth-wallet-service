@@ -207,7 +207,7 @@ export default class TransactionService extends Service{
         let query = this.receivedTxnRepo.createQueryBuilder('received_transactions')
         const result = await query.select('sentToVault')
         .addSelect('SUM(CAST(value AS float))','totalBalance')
-        .where('contractId = :contract',{contract: contractId ?? null})
+        .where('contractId = :contract',{contract:3})
         .groupBy("sentToVault")
         .getRawMany();
         return result;
