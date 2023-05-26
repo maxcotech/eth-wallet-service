@@ -18,6 +18,7 @@ export const ALCHEMY_KEY = process.env.ALCHEMY_KEY ?? "";
 export const ALCHEMY_NODE = process.env.ALCHEMY_NODE;
 export const MESSAGE_RETRY_LIMIT = parseInt(process.env.MESSAGE_RETRY_LIMIT ?? "100000");
 export const PORT = process.env.PORT;
+export const TXN_CONFIRM_MIN = 3;
 
 //Database Specific Configs 
 export const DB_TYPE = process.env.DB_TYPE ?? "mysql"

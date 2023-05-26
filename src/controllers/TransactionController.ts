@@ -1,6 +1,5 @@
 import Controller from './Controller';
 import TransactionService from '../services/TransactionService';
-import WalletServices from './../services/WalletServices';
 import { HttpRequestParams } from './../dataTypes/Http';
 import { VAULT_ADDRESS } from '../config/settings';
 import AppDataSource from '../config/dataSource';
@@ -16,16 +15,22 @@ export default class TransactionController extends Controller{
             const txnService = new TransactionService();
             const contractRepo = AppDataSource.getRepository(Contract);
             const contract = (contractAddress)? await contractRepo.findOneBy({contractAddress}): null;
-            const sentTransaction = await txnService.sendTransferTransaction(
+            const sentTxn = await txnService.sendTransferTransaction(
                 amount, 
                 fromAddress ?? VAULT_ADDRESS,
                 toAddress,
                 contract?.id ?? undefined
             )
-            return {
-                sentTransaction,
-                amount
+            if(sentTxn){
+                return {
+                    txnId: sentTxn,
+                    amount,
+                    address: toAddress
+                }
+            } else {
+                throw new Error('An Error Occurred')
             }
+           
 
         } catch(e){
             let message = "Unknown error occurred";

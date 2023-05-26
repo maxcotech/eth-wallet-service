@@ -10,6 +10,7 @@ import ValidationException from '../exceptions/ValidationException';
 import { transactionErrors } from '../config/errors/transaction.errors';
 import { walletErrors } from '../config/errors/wallet.errors';
 import SentTransaction from '../entities/SentTransaction';
+import { formatEther } from 'ethers/lib/utils';
 
 export default class TransactionService extends Service{
     vaultTxnInterval: number;
@@ -200,6 +201,17 @@ export default class TransactionService extends Service{
             contract.contractAddress,contract.contractAbi ?? this.getDefaultAbi(), signer ?? this.provider
         );
         return contractApi;
+    }
+
+    async getWalletAccountInfo(contractId: null | number){
+        let query = this.receivedTxnRepo.createQueryBuilder('received_transactions')
+        const result = await query.select('received_transactions.sentToVault','sentToVault')
+        .select('received_transactions.sentToVault','vaultTransaction')
+        .addSelect('SUM(CAST(value AS float)','totalBalance')
+        .where('received_transactions.contractId = :contract',{contract: contractId ?? null})
+        .groupBy("received_transactions.sentToVault")
+        .getRawMany();
+        return result;
     }
 
 
