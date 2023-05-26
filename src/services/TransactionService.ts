@@ -209,7 +209,7 @@ export default class TransactionService extends Service{
         .select('received_transactions.sentToVault','vaultTransaction')
         .addSelect('SUM(CAST(value AS float))','totalBalance')
         .where('received_transactions.contractId = :contract',{contract: contractId ?? null})
-        .groupBy("received_transactions.sentToVault")
+        .groupBy("sentToVault")
         .getRawMany();
         return result;
     }
