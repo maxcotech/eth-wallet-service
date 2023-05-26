@@ -205,10 +205,10 @@ export default class TransactionService extends Service{
 
     async getWalletAccountInfo(contractId: null | number){
         let query = this.receivedTxnRepo.createQueryBuilder('received_transactions')
-        const result = await query.select('received_transactions.sentToVault','sentToVault')
+        const result = await query.select('sentToVault')
         .addSelect('SUM(CAST(value AS float))','totalBalance')
-        .where('received_transactions.contractId = :contract',{contract: contractId ?? null})
-        .groupBy("received_transactions.sentToVault")
+        .where('contractId = :contract',{contract: contractId ?? null})
+        .groupBy("sentToVault")
         .getRawMany();
         return result;
     }
