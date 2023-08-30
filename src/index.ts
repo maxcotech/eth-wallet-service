@@ -15,18 +15,19 @@ const app = express();
 const jsonParser = bodyParser.json();
 
 (async () => {
-    try{
+    try {
         await AppDataSource.initialize();
         console.log('App Data source initialized');
         const messageService = new MessageQueueService();
-        app.post("/address",jsonParser,await requireAuthKey(AddressController.createAddress));
-        app.post("/transaction",jsonParser,await requireAuthKey(TransactionController.createTransaction));
-        app.post("/contract",jsonParser,await requireAuthKey(ContractController.saveContract));
-        app.delete('/contract/:address',await requireAuthKey(ContractController.deleteContract));
+        app.post("/address", jsonParser, await requireAuthKey(AddressController.createAddress));
+        app.post("/transaction", jsonParser, await requireAuthKey(TransactionController.createTransaction));
+        app.post("/contract", jsonParser, await requireAuthKey(ContractController.saveContract));
+        app.delete('/contract/:address', await requireAuthKey(ContractController.deleteContract));
+        app.get("/fee-estimate", await requireAuthKey(TransactionController.getFeeEstimate));
         app.get("/", HomeController.index);
         app.get("/test-run", Controller.testRun);
-        app.get('/retry-failed', async (req,res) => res.json({message:await messageService.reQueueFailedMessages()}))
-        app.listen(PORT,() => {
+        app.get('/retry-failed', async (req, res) => res.json({ message: await messageService.reQueueFailedMessages() }))
+        app.listen(PORT, () => {
             console.log(`Ethereum wallet service running on port ${PORT}`);
         })
 
@@ -34,10 +35,10 @@ const jsonParser = bodyParser.json();
         appService.syncBlockchainData();
         messageService.processMessageQueue();
 
-    } catch(e){
+    } catch (e) {
         console.log('Failed to initialize App', e)
     }
-    
+
 })()
 
 
