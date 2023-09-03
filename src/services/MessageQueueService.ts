@@ -13,50 +13,56 @@ export default class MessageQueueService extends Service {
     messageRepo: Repository<MessageQueue>
     contractRepo: Repository<Contract>
     failedMessageRepo: Repository<FailedQueueMessage>
-    constructor(){
+    timeoutHandler: any = null;
+    constructor() {
         super();
         this.messageRepo = AppDataSource.getRepository(MessageQueue);
         this.contractRepo = AppDataSource.getRepository(Contract);
         this.failedMessageRepo = AppDataSource.getRepository(FailedQueueMessage);
     }
 
-    async fetchQueue(){
+    async fetchQueue() {
         const messages = await this.messageRepo.find({
-            order: { retries: 'ASC'},
+            order: { retries: 'ASC' },
             take: 100,
             skip: 0,
-            where: { message: Not("")}})
+            where: { message: Not("") }
+        })
         messages;
         return messages;
     }
 
-    async processMessageQueue(timeout = 5000){
-        setTimeout(async () => {
-            let currentItem: MessageQueue | null  = null;
-            try{
+    async processMessageQueue(timeout = 5000) {
+        if (this.timeoutHandler !== null) {
+            clearTimeout(this.timeoutHandler);
+            this.timeoutHandler = null;
+        }
+        this.timeoutHandler = setTimeout(async () => {
+            let currentItem: MessageQueue | null = null;
+            try {
                 const queue = await this.fetchQueue();
                 const queueLength = queue.length;
-                if(queueLength > 0){
+                if (queueLength > 0) {
                     const client = await this.appClient();
-                    for(let i = 0; i < queueLength; i++){
+                    for (let i = 0; i < queueLength; i++) {
                         currentItem = queue[i];
                         const messagePayload = JSON.parse(currentItem.message);
-                        const response = await client.post(`transactions/chain/incoming/${WALLET_DEFAULT_SYMBOL}`,messagePayload);
-                        if(response.status === 200){
-                            console.log(`message sent successfully`,currentItem.message)
-                            await this.messageRepo.delete({id: currentItem.id})
+                        const response = await client.post(`transactions/chain/incoming/${WALLET_DEFAULT_SYMBOL}`, messagePayload);
+                        if (response.status === 200) {
+                            console.log(`message sent successfully`, currentItem.message)
+                            await this.messageRepo.delete({ id: currentItem.id })
                         }
                     }
                 }
                 this.processMessageQueue();
             }
-            catch(e){
-                console.log('Failed to Send Pending Messages ',(e instanceof AxiosError )? e.response?.data : ((e instanceof Error)? e.message:""))
-                if(currentItem){
-                    if(currentItem.retries >= MESSAGE_RETRY_LIMIT){
+            catch (e) {
+                console.log('Failed to Send Pending Messages ', (e instanceof AxiosError) ? e.response?.data : ((e instanceof Error) ? e.message : ""))
+                if (currentItem) {
+                    if (currentItem.retries >= MESSAGE_RETRY_LIMIT) {
                         await this.moveToFailedMessageRecord(currentItem)
                     } else {
-                        await this.messageRepo.update({id: currentItem.id},{retries: currentItem.retries + 1})
+                        await this.messageRepo.update({ id: currentItem.id }, { retries: currentItem.retries + 1 })
                     }
                 }
                 this.processMessageQueue()
@@ -64,7 +70,7 @@ export default class MessageQueueService extends Service {
         }, timeout)
     }
 
-    async moveToFailedMessageRecord(message: MessageQueue){
+    async moveToFailedMessageRecord(message: MessageQueue) {
         const newFailedMsg = new FailedQueueMessage();
         newFailedMsg.message = message.message;
         newFailedMsg.retried = message.retries;
@@ -73,43 +79,43 @@ export default class MessageQueueService extends Service {
         let savedFailedMsg: FailedQueueMessage | null = null;
         await AppDataSource.transaction(async () => {
             savedFailedMsg = await this.failedMessageRepo.save(newFailedMsg);
-            await this.messageRepo.delete({id: message.id});
+            await this.messageRepo.delete({ id: message.id });
         })
         return savedFailedMsg;
     }
 
-    async reQueueFailedMessages(){
-        try{
+    async reQueueFailedMessages() {
+        try {
             const items = await this.failedMessageRepo.find();
-            if(items.length > 0){
+            if (items.length > 0) {
                 const messages: MessageQueue[] = [];
                 const failedIdsToDelete: number[] = [];
                 items.forEach((item) => {
                     const newMessage = new MessageQueue();
                     newMessage.message = item.message;
-                    newMessage.type = item.type;                                                                                                                                                                   
+                    newMessage.type = item.type;
                     newMessage.retries = 0;
                     messages.push(newMessage);
                     failedIdsToDelete.push(item.id);
                 })
                 await AppDataSource.transaction(async () => {
                     await this.messageRepo.insert(messages);
-                    await this.failedMessageRepo.delete({id: In(failedIdsToDelete)})
+                    await this.failedMessageRepo.delete({ id: In(failedIdsToDelete) })
                 })
                 return 'Successfully requeued all failed messages';
             }
             return "No failed messages to requeue";
         }
-        catch(e){
-            return 'Failed to restore failed messages '+((e instanceof Error)? e.message: "");
+        catch (e) {
+            return 'Failed to restore failed messages ' + ((e instanceof Error) ? e.message : "");
         }
     }
 
 
-    async queueCreditTransaction(txnData: ReceivedTransaction){
-        try{
-            console.log('queueing for messaging',txnData);
-            const contract = (!!txnData.contractId)? await this.getContract(txnData.contractId): null;
+    async queueCreditTransaction(txnData: ReceivedTransaction) {
+        try {
+            console.log('queueing for messaging', txnData);
+            const contract = (!!txnData.contractId) ? await this.getContract(txnData.contractId) : null;
             const messagePayload = {
                 address: txnData.address,
                 value: txnData.value,
@@ -121,14 +127,14 @@ export default class MessageQueueService extends Service {
             const messageString = JSON.stringify(messagePayload);
             const messageQueue = new MessageQueue();
             messageQueue.message = messageString;
-            console.log('message string',messageQueue.message ?? "none", messageString);
+            console.log('message string', messageQueue.message ?? "none", messageString);
             messageQueue.type = MessageTypes.creditTransaction;
             await this.messageRepo.save(messageQueue);
             return true;
         }
-        catch(e){
-            if(e instanceof Error){
-                console.log(e.message,e.stack)
+        catch (e) {
+            if (e instanceof Error) {
+                console.log(e.message, e.stack)
             }
             return false;
         }
