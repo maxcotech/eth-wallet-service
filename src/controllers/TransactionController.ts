@@ -4,7 +4,7 @@ import { HttpRequestParams } from './../dataTypes/Http';
 import { DECIMAL_PLACES, VAULT_ADDRESS } from '../config/settings';
 import AppDataSource from '../config/dataSource';
 import Contract from '../entities/Contract';
-import ethers from 'ethers';
+import { ethers } from 'ethers';
 
 
 export default class TransactionController extends Controller {
