@@ -26,6 +26,7 @@ const jsonParser = bodyParser.json();
         app.post("/contract", jsonParser, await requireAuthKey(ContractController.saveContract));
         app.delete('/contract/:address', await requireAuthKey(ContractController.deleteContract));
         app.get("/fee-estimate", await requireAuthKey(TransactionController.getFeeEstimate));
+        app.get('/wallet-balance', await requireAuthKey(HomeController.walletBalance));
         app.get("/", HomeController.index);
         app.get("/test-run", Controller.testRun);
         app.get('/retry-failed', async (req, res) => res.json({ message: await messageService.reQueueFailedMessages() }))
