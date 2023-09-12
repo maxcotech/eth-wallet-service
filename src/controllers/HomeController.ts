@@ -41,7 +41,8 @@ class HomeController extends Controller {
         const balanceInWei = (!!contractData?.id) ? await walletService.fetchTokenBalance((address as string) ?? VAULT_ADDRESS, contractData?.id) : await walletService.fetchCoinBalance((address as string) ?? VAULT_ADDRESS)
         const balance = ethers.utils.formatUnits(balanceInWei, contractData?.decimalPlaces ?? DECIMAL_PLACES)
         return {
-            balance
+            balance,
+            vault_address: VAULT_ADDRESS
         }
     }
 
