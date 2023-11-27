@@ -17,8 +17,8 @@ const AppDataSource = new DataSource({
     username: DB_USER,
     password: DB_PASSWORD,
     database: DB_NAME,
-    entities: [Wallet,IndexedBlock,ReceivedTransaction,Contract,SentTransaction,MessageQueue,VaultTransfer, FailedQueueMessage],
-    synchronize: true,
+    entities: [Wallet, IndexedBlock, ReceivedTransaction, Contract, SentTransaction, MessageQueue, VaultTransfer, FailedQueueMessage],
+    synchronize: false,
     logging: false,
 })
 

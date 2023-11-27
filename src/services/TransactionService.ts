@@ -10,38 +10,38 @@ import ValidationException from '../exceptions/ValidationException';
 import { transactionErrors } from '../config/errors/transaction.errors';
 import { walletErrors } from '../config/errors/wallet.errors';
 import SentTransaction from '../entities/SentTransaction';
-import { formatEther } from 'ethers/lib/utils';
+import { formatEther, parseEther, parseUnits } from 'ethers/lib/utils';
 
-export default class TransactionService extends Service{
+export default class TransactionService extends Service {
     vaultTxnInterval: number;
     receivedTxnRepo: Repository<ReceivedTransaction>;
     walletRepo: Repository<Wallet>;
     sentTxnRepo: Repository<SentTransaction>;
 
-    constructor(){
+    constructor() {
         super();
         this.vaultTxnInterval = 1000 * 60 * 5;
         this.receivedTxnRepo = AppDataSource.getRepository(ReceivedTransaction);
         this.walletRepo = AppDataSource.getRepository(Wallet);
         this.sentTxnRepo = AppDataSource.getRepository(SentTransaction);
     }
-    async sendCoinToVault(fromAddress: string, amount: string, privateKey: any = null){
+    async sendCoinToVault(fromAddress: string, amount: string, privateKey: any = null) {
         const vaultAddr = VAULT_ADDRESS;
         const walletServices = new WalletServices();
-        const wallet = (privateKey === null || privateKey === undefined)? await walletServices.fetchWalletFromAddress(fromAddress): walletServices.createWalletFromPrivateKey(privateKey);
-        if(wallet !== null){
+        const wallet = (privateKey === null || privateKey === undefined) ? await walletServices.fetchWalletFromAddress(fromAddress) : walletServices.createWalletFromPrivateKey(privateKey);
+        if (wallet !== null) {
             const txnRequest = await wallet.populateTransaction({
                 to: vaultAddr,
                 value: ethers.utils.parseUnits(amount)
             });
             console.log(txnRequest);
-           
+
         }
     }
 
-    async saveReceivedTransaction(toAddress: string,sentToVault: boolean,txHash: string,amount: any,contractId?: number | null){
-        if(await this.receivedTxnRepo.findOneBy({txHash}) !== null){
-            console.log('transaction ',txHash,' already processed');
+    async saveReceivedTransaction(toAddress: string, sentToVault: boolean, txHash: string, amount: any, contractId?: number | null) {
+        if (await this.receivedTxnRepo.findOneBy({ txHash }) !== null) {
+            console.log('transaction ', txHash, ' already processed');
             return null;
         } else {
             const receivedTxn = new ReceivedTransaction();
@@ -54,56 +54,60 @@ export default class TransactionService extends Service{
         }
     }
 
-    getGasLimit(contractTransaction = false){
-        return (contractTransaction)? 250000 : 21000;
+    getGasLimit(contractTransaction = false) {
+        return (contractTransaction) ? 250000 : 21000;
     }
 
 
-    getFeeDifference(amount: number, gasPriceNum: number, decimal: number | null){
+    getFeeDifference(amount: number, gasPriceNum: number, decimal: number | null) {
         const gasLimitNum = this.getGasLimit();
         const totalFee = gasLimitNum * gasPriceNum;
-        return amount - parseFloat(ethers.utils.formatUnits(totalFee,decimal ?? DECIMAL_PLACES));
+        return amount - parseFloat(ethers.utils.formatUnits(totalFee, decimal ?? DECIMAL_PLACES));
     }
 
-    async createTransferTransaction(amountInput?: number, fromAddress?: string , recipientAddress?: string, contractId?: number, acceptBelowAmount: boolean = false){
-        console.log('creating transfer transaction of ',amountInput);
-        const toAddress = (!!recipientAddress)? recipientAddress: VAULT_ADDRESS;
+    async createTransferTransaction(amountInput?: number, fromAddress?: string, recipientAddress?: string, contractId?: number, acceptBelowAmount: boolean = false) {
+        console.log('creating transfer transaction of ', amountInput);
+        const toAddress = (!!recipientAddress) ? recipientAddress : VAULT_ADDRESS;
         const senderAddress = fromAddress ?? VAULT_ADDRESS;
         let transactionObj: ethers.providers.TransactionRequest | null | undefined = null;
-        if(!!contractId){
-            transactionObj = await this.createTokenTransfer(contractId,senderAddress,toAddress,amountInput,acceptBelowAmount);
+        if (!!contractId) {
+            transactionObj = await this.createTokenTransfer(contractId, senderAddress, toAddress, amountInput, acceptBelowAmount);
         } else {
-            transactionObj = await this.createCoinTransfer(senderAddress,toAddress,amountInput,acceptBelowAmount);
+            transactionObj = await this.createCoinTransfer(senderAddress, toAddress, amountInput, acceptBelowAmount);
         }
-        console.log('txn obj..............................',transactionObj);
+        console.log('txn obj..............................', transactionObj);
         return transactionObj;
     }
 
-    async fetchFeeEstimate(from: string, contractTransaction: boolean = false){
+    async fetchFeeEstimate(from: string, contractTransaction: boolean = false, amount = "0.0000001") {
         const walletService = new WalletServices();
         const wallet = await walletService.fetchWalletFromAddress(from);
-        const feeData = await wallet?.getFeeData();
-        return feeData?.maxFeePerGas?.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(),"wei"));
+        //const feeData = await wallet?.getFeeData();
+        //return feeData?.maxFeePerGas?.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
+        const gasUnits = await this.provider.estimateGas({});
+        const gasPrice = await this.provider.getGasPrice();
+        return gasPrice.mul(parseUnits(gasUnits.toString(), "gwei"));
+
     }
 
-    async createCoinTransfer(senderAddress:any, toAddress: any,  amountInput?: number, acceptBelowAmount: boolean = false ){
+    async createCoinTransfer(senderAddress: any, toAddress: any, amountInput?: number, acceptBelowAmount: boolean = false) {
         const walletService = new WalletServices();
         const balance = await walletService.fetchCoinBalance(senderAddress);
         const balanceInEther = ethers.utils.formatEther(balance);
-        const amount =  (!!amountInput)? ethers.utils.parseEther(amountInput.toString()): balance;
+        const amount = (!!amountInput) ? ethers.utils.parseEther(amountInput.toString()) : balance;
         const fromWallet = await walletService.fetchWalletFromAddress(senderAddress);
         let transactionObj = await fromWallet?.populateTransaction({
             type: EIP_TYPE,
             to: toAddress,
             from: senderAddress,
-            gasLimit: utils.parseUnits(this.getGasLimit(false).toString(),'wei')
+            gasLimit: utils.parseUnits(this.getGasLimit(false).toString(), 'wei')
         });
-        console.log('creating coin txn in coin trf func',{
+        console.log('creating coin txn in coin trf func', {
             balance, balanceInEther, amount, amountInput
         });
-        if(transactionObj){
-            if(balance.lt(amount)){
-                if(acceptBelowAmount){
+        if (transactionObj) {
+            if (balance.lt(amount)) {
+                if (acceptBelowAmount) {
                     transactionObj.value = balance;
                 } else {
                     throw new Error(walletErrors.insufficientBalance);
@@ -112,74 +116,74 @@ export default class TransactionService extends Service{
                 transactionObj.value = amount;
             }
         }
-        if(toAddress == VAULT_ADDRESS && transactionObj){
+        if (toAddress == VAULT_ADDRESS && transactionObj) {
             //substract transaction fee from transaction value;
             transactionObj.value = (transactionObj.value as ethers.BigNumber).sub((transactionObj.maxFeePerGas as ethers.BigNumber).mul((transactionObj.gasLimit as ethers.BigNumber)))
-            console.log('final value in ether to transfer is now ',ethers.utils.formatEther(transactionObj.value));
+            console.log('final value in ether to transfer is now ', ethers.utils.formatEther(transactionObj.value));
         }
         return transactionObj;
     }
 
-    
 
 
-    async createTokenTransfer(contractId:number, senderAddress:any, toAddress: any,  amountInput?: number, acceptBelowAmount: boolean = false   ){
-        try{
+
+    async createTokenTransfer(contractId: number, senderAddress: any, toAddress: any, amountInput?: number, acceptBelowAmount: boolean = false) {
+        try {
             const contract = await this.getContract(contractId);
             let transactionObj: ethers.providers.TransactionRequest | null | undefined = null;
             const walletService = new WalletServices();
-            const balance = await walletService.fetchTokenBalance(senderAddress,contract.id);
-            const amount =  (!!amountInput)? ethers.utils.parseUnits(amountInput.toString(),contract.decimalPlaces): balance;
+            const balance = await walletService.fetchTokenBalance(senderAddress, contract.id);
+            const amount = (!!amountInput) ? ethers.utils.parseUnits(amountInput.toString(), contract.decimalPlaces) : balance;
             const coinBalance = await walletService.fetchCoinBalance(senderAddress);
-            const feeEstimate = await this.fetchFeeEstimate(senderAddress,true);
+            const feeEstimate = await this.fetchFeeEstimate(senderAddress, true);
             console.log('fee estimate', feeEstimate);
-            if(coinBalance.lt(feeEstimate as ethers.BigNumber)){
-                console.log('Coin Balance is ',ethers.utils.formatEther(coinBalance));
+            if (coinBalance.lt(feeEstimate as ethers.BigNumber)) {
+                console.log('Coin Balance is ', ethers.utils.formatEther(coinBalance));
                 console.log('Fee Estimate is', ethers.utils.formatEther(feeEstimate as ethers.BigNumberish));
                 throw new ValidationException(transactionErrors.insufficientFee);
             }
-            if(balance.lt(amount)) { 
+            if (balance.lt(amount)) {
                 console.log('insufficient balance improvising')
-                if(acceptBelowAmount){
-                    transactionObj = await this.triggerSmartContract(contract.id,senderAddress,toAddress,balance)
+                if (acceptBelowAmount) {
+                    transactionObj = await this.triggerSmartContract(contract.id, senderAddress, toAddress, balance)
                 } else {
                     throw new ValidationException(walletErrors.insufficientBalance);
                 }
             } else {
                 console.log('sufficient balance creating transaction')
-                transactionObj = await this.triggerSmartContract(contract.id,senderAddress,toAddress,amount)
+                transactionObj = await this.triggerSmartContract(contract.id, senderAddress, toAddress, amount)
             }
             console.log(transactionObj);
             return transactionObj;
         }
-        catch(e){
-            console.log('Failed to create transaction',(e instanceof Error)? e.message+" "+e.stack:"")
+        catch (e) {
+            console.log('Failed to create transaction', (e instanceof Error) ? e.message + " " + e.stack : "")
         }
-        
+
     }
 
-    async triggerSmartContract(contractId: number, senderAddress: string, toAddress: string, amount: ethers.BigNumber){
+    async triggerSmartContract(contractId: number, senderAddress: string, toAddress: string, amount: ethers.BigNumber) {
         const walletService = new WalletServices();
-        const fromWallet = await walletService.fetchWalletFromAddress(senderAddress,true);
-        if(fromWallet){
+        const fromWallet = await walletService.fetchWalletFromAddress(senderAddress, true);
+        if (fromWallet) {
             const contractApi = await this.getContractApi(contractId, fromWallet);
             const data = contractApi.interface.encodeFunctionData("transfer", [
                 toAddress,
                 ethers.utils.parseUnits(amount.toString(), "wei"),
-              ]);
+            ]);
             const txnReq = await fromWallet.populateTransaction({
                 data,
                 type: EIP_TYPE ?? 1,
                 to: contractApi.address,
-                gasLimit: ethers.utils.parseUnits(this.getGasLimit(true).toString(),"wei"),
+                gasLimit: ethers.utils.parseUnits(this.getGasLimit(true).toString(), "wei"),
                 nonce: await this.provider.getTransactionCount(await fromWallet.getAddress())
             })
             return txnReq;
         }
-        
+
     }
 
-    getDefaultAbi(){
+    getDefaultAbi() {
         return JSON.stringify([
             "function name() public view returns (string)",
             "function symbol() public view returns (string)",
@@ -195,42 +199,42 @@ export default class TransactionService extends Service{
         ])
     }
 
-    async getContractApi(contractId:  number, signer?: ethers.Signer ){
+    async getContractApi(contractId: number, signer?: ethers.Signer) {
         const contract = await this.getContract(contractId);
         const contractApi = new ethers.Contract(
-            contract.contractAddress,contract.contractAbi ?? this.getDefaultAbi(), signer ?? this.provider
+            contract.contractAddress, contract.contractAbi ?? this.getDefaultAbi(), signer ?? this.provider
         );
         return contractApi;
     }
 
-    async getWalletAccountInfo(contractId: null | number){
+    async getWalletAccountInfo(contractId: null | number) {
         let query = this.receivedTxnRepo.createQueryBuilder('received_transactions')
         query = query.select('sentToVault')
-        .addSelect('SUM(CAST(value AS float))','totalBalance');
-        if(!!contractId === false){
+            .addSelect('SUM(CAST(value AS float))', 'totalBalance');
+        if (!!contractId === false) {
             query = query.where('contractId IS NULL')
         } else {
-            query = query.where('contractId = :contract',{contract: contractId})
+            query = query.where('contractId = :contract', { contract: contractId })
         }
         const result = await query.groupBy("sentToVault")
-        .getRawMany();
+            .getRawMany();
         return result;
     }
 
 
 
-    async sendTransferTransaction(amountInput?: number, fromAddress?: string , recipientAddress?: string, contractId?: number, acceptBelowAmount: boolean = false){
-        try{
-            const transaction = await this.createTransferTransaction(amountInput,fromAddress,recipientAddress,contractId,acceptBelowAmount);
-            if(!!transaction){
+    async sendTransferTransaction(amountInput?: number, fromAddress?: string, recipientAddress?: string, contractId?: number, acceptBelowAmount: boolean = false) {
+        try {
+            const transaction = await this.createTransferTransaction(amountInput, fromAddress, recipientAddress, contractId, acceptBelowAmount);
+            if (!!transaction) {
                 const walletServices = new WalletServices();
                 const senderWallet = await walletServices.fetchWalletFromAddress(fromAddress ?? VAULT_ADDRESS);
-                if(senderWallet){
+                if (senderWallet) {
                     console.log('sending transaction....');
                     const sentTxn = await senderWallet?.sendTransaction(transaction);
-                    console.log('sent txn',sentTxn);
+                    console.log('sent txn', sentTxn);
                     const receipt = await sentTxn.wait();
-                    console.log(`receipt `,receipt);
+                    console.log(`receipt `, receipt);
                     const sentTransaction = new SentTransaction();
                     sentTransaction.txId = sentTxn.hash;
                     await this.sentTxnRepo.save(sentTransaction);
@@ -238,7 +242,7 @@ export default class TransactionService extends Service{
                 }
             }
             return false;
-        } catch(e){
+        } catch (e) {
             console.log(e);
             return false;
         }
