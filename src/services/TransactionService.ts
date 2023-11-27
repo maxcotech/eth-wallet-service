@@ -81,12 +81,11 @@ export default class TransactionService extends Service {
 
     async fetchFeeEstimate(from: string, contractTransaction: boolean = false, amount = "0.0000001") {
         const walletService = new WalletServices();
-        const wallet = await walletService.fetchWalletFromAddress(from);
-        const feeData = await wallet?.getFeeData();
+        //const wallet = await walletService.fetchWalletFromAddress(from);
+        //const feeData = await wallet?.getFeeData();
         //return feeData?.maxFeePerGas?.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
         const gasPrice = await this.provider.getGasPrice();
-        const gasPriceInGWei = gasPrice.div(1e9);
-        return gasPriceInGWei.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
+        return gasPrice.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
 
     }
 
