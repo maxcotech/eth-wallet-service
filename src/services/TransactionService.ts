@@ -83,7 +83,7 @@ export default class TransactionService extends Service {
         const walletService = new WalletServices();
         const wallet = await walletService.fetchWalletFromAddress(from);
         const feeData = await wallet?.getFeeData();
-        return feeData?.maxFeePerGas?.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
+        return feeData?.maxFeePerGas?.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "gwei"));
         // const gasUnits = await this.provider.estimateGas({
 
         // });
