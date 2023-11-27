@@ -85,7 +85,10 @@ export default class TransactionService extends Service {
         const feeData = await wallet?.getFeeData();
         //return feeData?.maxFeePerGas?.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
         const gasPrice = await this.provider.getGasPrice();
-        return gasPrice.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
+        const gasPriceInGWei = parseFloat(gasPrice?.toString()) / 1e9;
+        const txnFee = gasPriceInGWei * this.getGasLimit(contractTransaction);
+        return ethers.BigNumber.from(txnFee);
+        //return gasPrice.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
 
     }
 
