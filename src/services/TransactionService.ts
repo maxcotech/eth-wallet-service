@@ -86,7 +86,7 @@ export default class TransactionService extends Service {
         //return feeData?.maxFeePerGas?.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
         const gasPrice = await this.provider.getGasPrice();
         const gasPriceInGWei = gasPrice.div(1e9);
-        return gasPrice.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString()));
+        return gasPriceInGWei.mul(ethers.utils.parseUnits(this.getGasLimit(contractTransaction).toString(), "wei"));
 
     }
 
