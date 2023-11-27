@@ -5,6 +5,7 @@ import { DECIMAL_PLACES, VAULT_ADDRESS } from '../config/settings';
 import AppDataSource from '../config/dataSource';
 import Contract from '../entities/Contract';
 import { ethers } from 'ethers';
+import { parseEther } from 'ethers/lib/utils';
 
 
 export default class TransactionController extends Controller {
@@ -22,7 +23,8 @@ export default class TransactionController extends Controller {
             fee: ethers.utils.formatUnits(feeUnits as ethers.BigNumberish, (req?.query?.contract) ? await getContractDecimalPlaces() : DECIMAL_PLACES),
             amount: req.query?.amount,
             from: req.query?.from,
-            to: req.query?.to
+            to: req.query?.to,
+            gasLimit: (await txnService.provider.estimateGas({ to: VAULT_ADDRESS, value: parseEther('0.0005') })).toString()
         }
     }
 
