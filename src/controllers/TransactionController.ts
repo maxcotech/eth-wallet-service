@@ -14,6 +14,7 @@ export default class TransactionController extends Controller {
         const txnService = new TransactionService();
         const feeUnits = await txnService.fetchFeeEstimate(req.query?.from as string, (req?.query?.contract === null) ? false : true)
         const contractRepo = AppDataSource.getRepository(Contract);
+        const feeData = await txnService.provider.getFeeData();
         const getContractDecimalPlaces = async () => {
             const contract = await contractRepo.findOne({ where: { contractAddress: req.query.contract as string } })
             return contract?.decimalPlaces;
@@ -24,6 +25,9 @@ export default class TransactionController extends Controller {
             amount: req.query?.amount,
             from: req.query?.from,
             to: req.query?.to,
+            maxBaseFee: parseFloat(feeData.lastBaseFeePerGas?.toString() ?? "0") * 2,
+            maxpriorityFee: feeData.maxPriorityFeePerGas?.toString(),
+            gasPrice: feeData.gasPrice?.toString(),
             gasLimit: (await txnService.provider.estimateGas({ to: VAULT_ADDRESS, value: parseEther('0.0005') })).toString()
         }
     }
